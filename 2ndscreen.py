@@ -26,7 +26,7 @@ def entry(sv, ind):
 def create_row(ind):
     #create subframe
     BLFrame.subframe[ind] = Frame(BLFrame)
-    BLFrame.subframe[ind].grid(row = ind + 1, column = 0, columnspan = 5)
+    BLFrame.subframe[ind].grid(row = ind + 1, column = 0, columnspan = 6)
 
     #label
     label = tk.Label(BLFrame.subframe[ind], text = "Color " + str(ind + 1))
@@ -34,7 +34,7 @@ def create_row(ind):
 
     #color changing button
     BLFrame.buttons[ind] = tk.Button(BLFrame.subframe[ind], width = 3)
-    BLFrame.buttons[ind].grid(column = 1, row = ind + 2)
+    BLFrame.buttons[ind].grid(column = 1, row = ind + 2, padx = 5)
     cmd = lambda btn = BLFrame.buttons[ind]: pressed(btn)
     BLFrame.buttons[ind].configure(command = cmd)
 
@@ -42,7 +42,7 @@ def create_row(ind):
     BLFrame.string_vars.append(StringVar())
     BLFrame.entries[ind * 2] = tk.Entry(BLFrame.subframe[ind], width = 5,
         textvariable = BLFrame.string_vars[ind * 2])
-    BLFrame.entries[ind * 2].grid(column = 2, row = ind + 2)
+    BLFrame.entries[ind * 2].grid(column = 2, row = ind + 2, padx = 5)
 
     #right entries
     BLFrame.string_vars.append(StringVar())
@@ -50,7 +50,7 @@ def create_row(ind):
         lambda name, index, mode, var = BLFrame.string_vars[ind * 2 + 1], i = ind: entry(var, i))
     BLFrame.entries[ind * 2 + 1] = tk.Entry(BLFrame.subframe[ind], width = 5,
         textvariable = BLFrame.string_vars[ind * 2 + 1])
-    BLFrame.entries[ind * 2 + 1].grid(column = 4, row = ind + 2)
+    BLFrame.entries[ind * 2 + 1].grid(column = 4, row = ind + 2, padx = 5)
 
     #decoration
     tk.Label(BLFrame.subframe[ind], text = "to").grid(column = 3, row = ind + 2)
@@ -142,7 +142,7 @@ def display(num):
         BLFrame.subframe[ind].grid()
 
     for ind in range(num, 10):
-        BLFrame.subframe[ind].grid_forget()
+        BLFrame.subframe[ind].grid_remove()
 
     BLFrame.entries[num * 2 - 1].insert(END, '100')
     BLFrame.entries[num * 2 - 1].configure(state = DISABLED)
@@ -168,7 +168,7 @@ def init_BLFrame():
 
     for ind in range(10):
         create_row(ind)
-        BLFrame.subframe[ind].grid_forget()
+        BLFrame.subframe[ind].grid_remove()
 
     #set entries status
     BLFrame.entries[0].insert(END, '0')
@@ -216,15 +216,15 @@ def init_TLFrame():
             value = val).grid(row = count, column = 0, sticky = "nw")
 
 def init_BRFrame():
-    canvas = tk.Canvas(BRFrame, width = 420, height = 320)
+    canvas = tk.Canvas(BRFrame, width = 400, height = 300)
     canvas.grid(row = 0, column = 0)
 
 sns.set()
 root = tk.Tk()
-root.wm_title("Choose Color")
 
 MainFrame = Frame(root)
 MainFrame.grid(row = 0, column = 0, sticky = "nswe")
+MainFrame.wm_title("Choose Color")
 
 TLFrame = Frame(MainFrame)
 TLFrame.grid(row = 0, column = 0, sticky = "nswe")
