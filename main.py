@@ -245,16 +245,18 @@ def init_SetupFrame():
     showfilename = tk.Label(SetupFrame, text = "No file chosen")
     showfilename.grid(row = 1, column = 1)
 
+    global choosefile, vYesNo
+
     choosefile = tk.Button(SetupFrame, text = "Browse", command = choose_file)
     choosefile.grid(row = 0, column = 1)
 
     tk.Label(SetupFrame, text = "Include 0s in calculation?").grid(row = 2, column = 0, sticky = "w")
 
-    v = tk.IntVar()
-    v.set(0)
-    tk.Radiobutton(SetupFrame, text = "Yes", variable = v, 
+    vYesNo = tk.IntVar()
+    vYesNo.set(0)
+    tk.Radiobutton(SetupFrame, text = "Yes", variable = vYesNo, 
         value = 1).grid(row = 2, column = 1, sticky = "nw")
-    tk.Radiobutton(SetupFrame, text = "No", variable = v,
+    tk.Radiobutton(SetupFrame, text = "No", variable = vYesNo,
         value = 0).grid(row = 3, column = 1, sticky = "nw")
 
     next = tk.Button(SetupFrame, text = "Next", command = next_btn)
