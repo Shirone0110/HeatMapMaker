@@ -23,12 +23,38 @@ def entry(sv, ind):
     except KeyError:
         print("Ignore this")
 
-def create_plot(colormap): #create plot
-    sns.set(style = 'white')
-    data = np.random.rand(10, 10)
-    f, ax = plt.subplots(figsize = (4, 3))
-    sns.heatmap(vmin = 0.0, vmax = 1.0, data = data, cmap = colormap, linewidths = 0.5)
-    return f
+def create_row(ind):
+    #create subframe
+    BLFrame.subframe[ind] = Frame(BLFrame)
+    BLFrame.subframe[ind].grid(row = ind + 1, column = 0, columnspan = 5)
+
+    #label
+    label = tk.Label(BLFrame.subframe[ind], text = "Color " + str(ind + 1))
+    label.grid(column = 0, row = ind + 2)
+
+    #color changing button
+    BLFrame.buttons[ind] = tk.Button(BLFrame.subframe[ind], width = 3)
+    BLFrame.buttons[ind].grid(column = 1, row = ind + 2)
+    cmd = lambda btn = BLFrame.buttons[ind]: pressed(btn)
+    BLFrame.buttons[ind].configure(command = cmd)
+
+    #left entries
+    BLFrame.string_vars.append(StringVar())
+    BLFrame.entries[ind * 2] = tk.Entry(BLFrame.subframe[ind], width = 5,
+        textvariable = BLFrame.string_vars[ind * 2])
+    BLFrame.entries[ind * 2].grid(column = 2, row = ind + 2)
+
+    #right entries
+    BLFrame.string_vars.append(StringVar())
+    BLFrame.string_vars[ind * 2 + 1].trace('w',
+        lambda name, index, mode, var = BLFrame.string_vars[ind * 2 + 1], i = ind: entry(var, i))
+    BLFrame.entries[ind * 2 + 1] = tk.Entry(BLFrame.subframe[ind], width = 5,
+        textvariable = BLFrame.string_vars[ind * 2 + 1])
+    BLFrame.entries[ind * 2 + 1].grid(column = 4, row = ind + 2)
+
+    #decoration
+    tk.Label(BLFrame.subframe[ind], text = "to").grid(column = 3, row = ind + 2)
+    tk.Label(BLFrame.subframe[ind], text = "%").grid(column = 5, row = ind + 2)
 
 def NonLinCdict(steps, hexcol_array):
     cdict = {'red': (), 'green': (), 'blue': ()}
@@ -39,7 +65,14 @@ def NonLinCdict(steps, hexcol_array):
         cdict['blue'] = cdict['blue'] + ((s, rgb[2], rgb[2]),)
     return cdict
 
-def export(fig):
+def create_plot(colormap): #create plot with color map
+    sns.set(style = 'white')
+    data = np.random.rand(10, 10)
+    f, ax = plt.subplots(figsize = (4, 3))
+    sns.heatmap(vmin = 0.0, vmax = 1.0, data = data, cmap = colormap, linewidths = 0.5)
+    return f
+
+def export(fig): #export figure in pdf or png
     files = [('PNG', '*.png'), ('PDF', '*.pdf')]
     file = asksaveasfile(filetypes = files, defaultextension = files)
     if file is None:
@@ -51,26 +84,38 @@ def export(fig):
 def preview(num):
     colors = []
     split = [0]
+
+    #get color and range
     for ind in range(num):
         colors.append(BLFrame.buttons[ind].cget('bg'))
         split.append(float(BLFrame.string_vars[ind * 2 + 1].get()) / 100)
+
+    #range from 0 to 1
     split[num - 1] = 1
+
+    #create color map
     cdict = NonLinCdict(split, colors)
     colormap = LinearSegmentedColormap('Custom Color', cdict)
+
+    #create figure
     fig = create_plot(colormap)
     canvas = FigureCanvasTkAgg(fig, master = BRFrame)  
     canvas.draw()
     canvas.get_tk_widget().grid(row = 0, column = 0)
+
+    #export button
     cmd = lambda fig = fig: export(fig)
     exportbutton = tk.Button(BRFrame, text = "Export", command = cmd)
     exportbutton.grid(row = 1, column = 0, sticky = "se")
 
 def check(num):
+    #check all color selected
     for ind in range(num):
         if BLFrame.buttons[ind].cget('bg') == 'SystemButtonFace':
             messagebox.showerror("Error", "Please choose color")
             return
     
+    #check all range inserted
     for ind in range(num):
         try:
             float(BLFrame.string_vars[ind * 2 + 1].get())
@@ -78,6 +123,7 @@ def check(num):
             messagebox.showerror("Error", "Please enter range in numbers")
             return
 
+    #check all range valid
     tmp = 0
     for ind in range(num):
         val = float(BLFrame.string_vars[ind * 2 + 1].get())
@@ -89,49 +135,22 @@ def check(num):
     preview(num)
 
 def display(num):
-    BLFrame.buttons = {}
-    BLFrame.entries = {}
-    BLFrame.string_vars = []
-    
+    #show number of rows needed
     for ind in range(num):
-        #label
-        tk.Label(BLFrame, text = "Color " + str(ind + 1)).grid(column = 0, row = ind + 2)
+        BLFrame.entries[ind * 2 + 1].configure(state = NORMAL)
+        BLFrame.entries[ind * 2 + 1].delete(0, END)
+        BLFrame.subframe[ind].grid()
 
-        #choose color buttons
-        BLFrame.buttons[ind] = tk.Button(BLFrame, width = 3)
-        BLFrame.buttons[ind].grid(column = 1, row = ind + 2)
-        cmd = lambda btn = BLFrame.buttons[ind]: pressed(btn)
-        BLFrame.buttons[ind].configure(command = cmd)
+    for ind in range(num, 10):
+        BLFrame.subframe[ind].grid_forget()
 
-        #entries left
-        BLFrame.string_vars.append(StringVar())
-        BLFrame.entries[ind * 2] = tk.Entry(BLFrame, width = 5, 
-            textvariable = BLFrame.string_vars[ind * 2])
-        BLFrame.entries[ind * 2].grid(column = 2, row = ind + 2)
-
-        tk.Label(BLFrame, text = "to").grid(column = 3, row = ind + 2)
-
-        #entries right
-        BLFrame.string_vars.append(StringVar())
-        BLFrame.string_vars[ind * 2 + 1].trace('w', 
-            lambda name, index, mode, var = BLFrame.string_vars[ind * 2 + 1], i = ind: entry(var, i))
-        BLFrame.entries[ind * 2 + 1] = tk.Entry(BLFrame, width = 5, 
-                                    textvariable = BLFrame.string_vars[ind * 2 + 1])
-        BLFrame.entries[ind * 2 + 1].grid(column = 4, row = ind + 2)
-
-        tk.Label(BLFrame, text = "%").grid(column = 5, row = ind + 2)
-
-    #set entries status
-    BLFrame.entries[0].insert(END, '0')
     BLFrame.entries[num * 2 - 1].insert(END, '100')
-    for ind in range(num):
-        BLFrame.entries[ind * 2].configure(state = DISABLED)
     BLFrame.entries[num * 2 - 1].configure(state = DISABLED)
 
     #preview button
     cmd = lambda n = num: check(n)
     button = tk.Button(BLFrame, text="Preview", command = cmd)
-    button.grid(column = 2, row = num + 2, sticky = "se")
+    button.grid(column = 2, row = 12, sticky = "se")
 
 def init_BLFrame():
     label = tk.Label(BLFrame, text = "Colors")
@@ -141,6 +160,20 @@ def init_BLFrame():
     optionList = np.arange(4, 11, 1)
     dropdown = tk.OptionMenu(BLFrame, v, *optionList, command = display)
     dropdown.grid(column = 1, row = 0)
+
+    BLFrame.buttons = {}
+    BLFrame.entries = {}
+    BLFrame.string_vars = []
+    BLFrame.subframe = {}
+
+    for ind in range(10):
+        create_row(ind)
+        BLFrame.subframe[ind].grid_forget()
+
+    #set entries status
+    BLFrame.entries[0].insert(END, '0')
+    for ind in range(10):
+        BLFrame.entries[ind * 2].configure(state = DISABLED)
 
 def create_default(color): #create plot
     sns.set(style = 'white')
