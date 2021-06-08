@@ -1,5 +1,6 @@
 import numpy as np
 import seaborn as sns
+import pandas as pd
 import tkinter as tk
 from tkinter.constants import DISABLED, END, NORMAL
 from tkinter.filedialog import asksaveasfile, askopenfile
@@ -67,9 +68,14 @@ def NonLinCdict(steps, hexcol_array):
 
 def create_plot(colormap): #create plot with color map
     sns.set(style = 'white')
-    data = np.random.rand(10, 10)
+    #print(data)
     f, ax = plt.subplots(figsize = (4, 3))
-    sns.heatmap(vmin = 0.0, vmax = 1.0, data = data, cmap = colormap, linewidths = 0.5)
+    sns.heatmap(vmin = 0.0, vmax = 1.0, data = data, 
+        cmap = colormap, xticklabels = columns)
+    plt.yticks(rotation = 0)
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top')
+    ax.tick_params(length = 0)
     return f
 
 def export(fig): #export figure in pdf or png
@@ -177,13 +183,17 @@ def init_BLFrame():
 
 def create_default(color): #create plot
     sns.set(style = 'white')
-    data = np.random.rand(10, 10)
+    #print(data)
     f, ax = plt.subplots(figsize = (4, 3))
     if (int(color) < 3):
         cmap = sns.color_palette(values[color])
     else:
         cmap = sns.color_palette(values[color], as_cmap = True)
-    sns.heatmap(data, cmap = cmap, center = 0, linewidths = 0.5)
+    ax = sns.heatmap(data, cmap = cmap, center = 0, xticklabels = columns)
+    plt.yticks(rotation = 0)
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top')
+    ax.tick_params(length = 0)
     return f
 
 def draw(v): #redraw heatmap when change button
@@ -229,38 +239,126 @@ def next_btn():
 
 def choose_file():
     files = [('CSV', '*.csv')]
-    file = askopenfile(filetypes = files, defaultextension = files)
-    if file is None:
+    global csvfile
+    csvfile = askopenfile(filetypes = files, defaultextension = files)
+    if csvfile is None:
         return
-    addr = file.name
+    addr = csvfile.name
     addr = addr.split('/')
     showfilename.config(text = addr[-1])
 
+def noZeros(df, ind):
+    sum = 0
+    cnt = 0
+    new = []
+    lastSpec = df.at[0, "Category"]
+    numOtus = df.at[0, "numOtus"]
+    
+    for row in df.itertuples():
+        if(row[2] == lastSpec):
+            sum += row[ind]
+            if(row[ind] != 0):
+                cnt += 1
+        else:
+            avgOcurrence = sum / (cnt * numOtus)
+            new.append(avgOcurrence)
+
+            sum = 0
+            cnt = 0
+            sum += row[ind]
+            if(row[ind] != 0):
+                cnt += 1
+        lastSpec = row[2]
+        
+    return new
+
+def inclZeros(df, ind):
+    sum = 0
+    cnt = 0
+    new = []
+    lastSpec = df.at[0, "Category"]
+    numOtus = df.at[0, "numOtus"]
+    
+    for row in df.itertuples():
+        if(row[2] == lastSpec):
+            sum += row[ind]
+            cnt += 1
+        else:
+            avgOcurrence = sum / (cnt * numOtus)
+            new.append(avgOcurrence)
+
+            sum = 0
+            cnt = 0
+            sum += row[ind]
+            cnt += 1
+        lastSpec = row[2]
+        
+    return new
+
+def columnNames(df):
+    columns = []
+    lastSpec = df.at[0, "Category"]
+    genus = df.at[0, "Sub"]
+    
+    for row in df.itertuples():
+        if row[2] != lastSpec:
+            columns.append(genus[0] + ". " + lastSpec)
+            lastSpec = row[2]
+            genus = row[3]
+            
+    return columns
+
+def edit(df):
+    del df['label']
+    del df["Group"]
+    df = df.loc[df["Category"] != "water"]
+    df = df.loc[df["Category"] != "soil"]
+    df = df.loc[df["Category"] != "moss"] 
+    return df
+
+def process_file():
+    path = csvfile.name
+    df = pd.read_csv(path)
+    df = edit(df)
+    columns = columnNames(df)
+    data = []
+    
+    for ind in range(4, 10):
+        if vYesNo.get() == 0:
+            new = noZeros(df, ind)
+        else:
+            new = inclZeros(df, ind)
+        data.append(new)
+    
+    #print(columns)
+    #for row in data:
+    #    print(row)
+
 def init_SetupFrame():
     #choose file prompt
-    tk.Label(SetupFrame, text = "Choose data file").grid(row = 0, column = 0, sticky = "w")
+    tk.Label(SetupFrame, text = "Choose data file").grid(row = 0, column = 0, 
+        sticky = "w", ipadx = 10, ipady = 10)
 
     #show file name
-    global showfilename
+    global showfilename, vYesNo
     showfilename = tk.Label(SetupFrame, text = "No file chosen")
     showfilename.grid(row = 1, column = 1)
-
-    global choosefile, vYesNo
 
     choosefile = tk.Button(SetupFrame, text = "Browse", command = choose_file)
     choosefile.grid(row = 0, column = 1)
 
-    tk.Label(SetupFrame, text = "Include 0s in calculation?").grid(row = 2, column = 0, sticky = "w")
+    tk.Label(SetupFrame, text = "Include 0s in calculation?").grid(row = 2, column = 0, 
+        sticky = "w", padx = 10)
 
     vYesNo = tk.IntVar()
-    vYesNo.set(0)
     tk.Radiobutton(SetupFrame, text = "Yes", variable = vYesNo, 
-        value = 1).grid(row = 2, column = 1, sticky = "nw")
+        value = 1, command = process_file).grid(row = 2, column = 1, sticky = "nw")
     tk.Radiobutton(SetupFrame, text = "No", variable = vYesNo,
-        value = 0).grid(row = 3, column = 1, sticky = "nw")
+        value = 0, command = process_file).grid(row = 3, column = 1, sticky = "nw")
+    #vYesNo.set(0)
 
     next = tk.Button(SetupFrame, text = "Next", command = next_btn)
-    next.grid(row = 4, column = 1)
+    next.grid(row = 4, column = 1, pady = 10)
 
 def back_btn():
     HeatMapFrame.grid_remove()
@@ -291,6 +389,9 @@ def on_closing():
 sns.set()
 root = tk.Tk()
 root.wm_title("HeatMap Maker")
+
+data = np.random.rand(10, 10)
+columns = np.random.rand(10)
 
 HeatMapFrame = Frame(root)
 HeatMapFrame.grid(row = 0, column = 0, sticky = "nswe")
