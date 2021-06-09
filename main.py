@@ -27,15 +27,15 @@ def entry(sv, ind):
 def create_row(ind):
     #create subframe
     BLFrame.subframe[ind] = Frame(BLFrame)
-    BLFrame.subframe[ind].grid(row = ind + 1, column = 0, columnspan = 6)
+    BLFrame.subframe[ind].grid(row = ind + 2, column = 1, columnspan = 6)
 
     #label
     label = tk.Label(BLFrame.subframe[ind], text = "Color " + str(ind + 1))
-    label.grid(column = 0, row = ind + 2)
+    label.grid(column = 1, row = ind + 3)
 
     #color changing button
     BLFrame.buttons[ind] = tk.Button(BLFrame.subframe[ind], width = 3)
-    BLFrame.buttons[ind].grid(column = 1, row = ind + 2, padx = 5)
+    BLFrame.buttons[ind].grid(column = 2, row = ind + 3, padx = 5)
     cmd = lambda btn = BLFrame.buttons[ind]: pressed(btn)
     BLFrame.buttons[ind].configure(command = cmd)
 
@@ -43,7 +43,7 @@ def create_row(ind):
     BLFrame.string_vars.append(StringVar())
     BLFrame.entries[ind * 2] = tk.Entry(BLFrame.subframe[ind], width = 5,
         textvariable = BLFrame.string_vars[ind * 2])
-    BLFrame.entries[ind * 2].grid(column = 2, row = ind + 2, padx = 5)
+    BLFrame.entries[ind * 2].grid(column = 3, row = ind + 3, padx = 5)
 
     #right entries
     BLFrame.string_vars.append(StringVar())
@@ -51,11 +51,11 @@ def create_row(ind):
         lambda name, index, mode, var = BLFrame.string_vars[ind * 2 + 1], i = ind: entry(var, i))
     BLFrame.entries[ind * 2 + 1] = tk.Entry(BLFrame.subframe[ind], width = 5,
         textvariable = BLFrame.string_vars[ind * 2 + 1])
-    BLFrame.entries[ind * 2 + 1].grid(column = 4, row = ind + 2, padx = 5)
+    BLFrame.entries[ind * 2 + 1].grid(column = 5, row = ind + 3, padx = 5)
 
     #decoration
-    tk.Label(BLFrame.subframe[ind], text = "to").grid(column = 3, row = ind + 2)
-    tk.Label(BLFrame.subframe[ind], text = "%").grid(column = 5, row = ind + 2)
+    tk.Label(BLFrame.subframe[ind], text = "to").grid(column = 4, row = ind + 3)
+    tk.Label(BLFrame.subframe[ind], text = "%").grid(column = 6, row = ind + 3)
 
 def NonLinCdict(steps, hexcol_array):
     cdict = {'red': (), 'green': (), 'blue': ()}
@@ -69,13 +69,17 @@ def NonLinCdict(steps, hexcol_array):
 def create_plot(colormap): #create plot with color map
     sns.set(style = 'white')
     #print(data)
-    f, ax = plt.subplots(figsize = (4, 3))
-    ax = sns.heatmap(vmin = 0.0, vmax = 1.0, data = data.head(10), 
+    f, ax = plt.subplots(figsize = (9, 6))
+    max = data.to_numpy().max()
+    min = data.to_numpy().min()
+    ax = sns.heatmap(vmin = min, vmax = max, data = data.head(10), 
         cmap = colormap)
-    plt.yticks(rotation = 0)
     ax.xaxis.tick_top()
+    ax.set_xticklabels(data.columns, rotation = 45)
+    ax.set_ylabel('')
     ax.xaxis.set_label_position('top')
     ax.tick_params(length = 0)
+    plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
     return f
 
 def export(fig): #export figure in pdf or png
@@ -105,13 +109,13 @@ def preview(num):
 
     #create figure
     fig = create_plot(colormap)
-    canvas = FigureCanvasTkAgg(fig, master = BRFrame)  
+    canvas = FigureCanvasTkAgg(fig, master = CustomFrame)  
     canvas.draw()
     canvas.get_tk_widget().grid(row = 0, column = 0)
 
     #export button
     cmd = lambda fig = fig: export(fig)
-    exportbutton = tk.Button(BRFrame, text = "Export", command = cmd)
+    exportbutton = tk.Button(CustomFrame, text = "Export", command = cmd)
     exportbutton.grid(row = 1, column = 0, sticky = "se")
 
 def check(num):
@@ -158,14 +162,25 @@ def display(num):
     button = tk.Button(BLFrame, text="Preview", command = cmd)
     button.grid(column = 2, row = 12, sticky = "se")
 
+def switch():
+    if vOption.get() == 1:
+        CustomFrame.grid()
+        DefaultFrame.grid_remove()
+    else:
+        DefaultFrame.grid()
+        CustomFrame.grid_remove()
+
 def init_BLFrame():
+    tk.Radiobutton(BLFrame, text = "Custom", variable = vOption, 
+        value = 1, command = switch).grid(row = 0, column = 0, sticky = "nw", columnspan = 2)
+
     label = tk.Label(BLFrame, text = "Colors")
-    label.grid(column = 0, row = 0)
+    label.grid(column = 1, row = 1)
 
     v = tk.IntVar()
     optionList = np.arange(4, 11, 1)
     dropdown = tk.OptionMenu(BLFrame, v, *optionList, command = display)
-    dropdown.grid(column = 1, row = 0)
+    dropdown.grid(column = 2, row = 1)
 
     BLFrame.buttons = {}
     BLFrame.entries = {}
@@ -183,34 +198,37 @@ def init_BLFrame():
 
 def create_default(color): #create plot
     sns.set(style = 'white')
-    f, ax = plt.subplots(figsize = (4, 3))
+    f, ax = plt.subplots(figsize = (9, 6))
     if (int(color) < 3):
         cmap = sns.color_palette(values[color])
     else:
         cmap = sns.color_palette(values[color], as_cmap = True)
     ax = sns.heatmap(data.head(10), cmap = cmap, center = 0)
-    plt.yticks(rotation = 0)
+    ax.set_ylabel('')
     ax.xaxis.tick_top()
+    ax.set_xticklabels(data.columns, rotation = 45)
     ax.xaxis.set_label_position('top')
     ax.tick_params(length = 0)
+    plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
     return f
 
 def draw(v): #redraw heatmap when change button
     color = v.get()
     fig = create_default(color)
-    canvas = FigureCanvasTkAgg(fig, master = TRFrame)  
+    canvas = FigureCanvasTkAgg(fig, master = DefaultFrame)  
     canvas.draw()
     canvas.get_tk_widget().grid(row = 0, column = 0)
+
     cmd = lambda fig = fig: export(fig)
-    exportbutton = tk.Button(TRFrame, text = "Export", command = cmd)
+    exportbutton = tk.Button(DefaultFrame, text = "Export", command = cmd)
     exportbutton.grid(row = 1, column = 0, sticky = "se")
 
 def init_TLFrame():
-    canvas = tk.Canvas(TLFrame, width = 250, height = 320)
-    canvas.grid(row = 0, column = 0, rowspan = 10, columnspan = 6)
+    tk.Radiobutton(TLFrame, text = "Default", variable = vOption, 
+        value = 0, command = switch).grid(row = 0, column = 0, sticky = "nw", columnspan = 2)
 
     label = tk.Label(TLFrame, text = "Choose a color palette:")
-    label.grid(column = 0, row = 0, columnspan = 3, sticky = "nw")
+    label.grid(column = 1, row = 1, columnspan = 3, sticky = "nw")
 
     #some random color schemes
     global values, vDefaultColor
@@ -225,15 +243,16 @@ def init_TLFrame():
         count += 1
         tk.Radiobutton(TLFrame, text = text, variable = vDefaultColor, 
             command = lambda v = vDefaultColor: draw(v), 
-            value = val).grid(row = count, column = 0, sticky = "nw")
+            value = val).grid(row = count + 1, column = 1, sticky = "nw")
 
-def init_BRFrame():
-    canvas = tk.Canvas(BRFrame, width = 400, height = 300)
-    canvas.grid(row = 0, column = 0)
+#def init_BRFrame():
+#    canvas = tk.Canvas(BRFrame, width = 400, height = 300)
+#    canvas.grid(row = 0, column = 0)
 
 def find_top(df):
     df['mean'] = df.mean(axis = 1)
     df = df.sort_values(by = ['mean'], ascending = False)
+    del df['mean']
     return df.head(10)
 
 def rowNames(indices, labels):
@@ -263,7 +282,7 @@ def process_file():
     data['ind'] = rowNames(data.index, df.columns)
     data.set_index(keys = 'ind', inplace = True)
 
-    print(data)
+    #print(data)
     draw(vDefaultColor)
 
 def next_btn():
@@ -391,23 +410,37 @@ def back_btn():
     HeatMapFrame.grid_remove()
     SetupFrame.grid()
 
+def setup_plot():
+    plt.yticks(rotation = 0)
+    plt.rc('axes', labelsize = 12)
+
 def init_HeatMapFrame():
-    global TLFrame, TRFrame, BLFrame, BRFrame
+    global TLFrame, DefaultFrame, BLFrame, CustomFrame, vOption
+    vOption = tk.IntVar() # 0 for default, 1 for custom
+
     TLFrame = Frame(HeatMapFrame)
     TLFrame.grid(row = 0, column = 0, sticky = "nswe")
-    TRFrame = Frame(HeatMapFrame)
-    TRFrame.grid(row = 0, column = 1, sticky = "nswe")
+    DefaultFrame = Frame(HeatMapFrame)
+    DefaultFrame.grid(row = 0, column = 1, sticky = "nswe", rowspan = 2)
     BLFrame = Frame(HeatMapFrame)
     BLFrame.grid(row = 1, column = 0, sticky = "nswe")
-    BRFrame = Frame(HeatMapFrame)
-    BRFrame.grid(row = 1, column = 1, sticky = "nswe")
+    CustomFrame = Frame(HeatMapFrame)
+    CustomFrame.grid(row = 0, column = 1, sticky = "nswe", rowspan = 2)
+    CustomFrame.grid_remove()
+
+    canvas = tk.Canvas(TLFrame, width = 250, height = 200)
+    canvas.grid(row = 0, column = 0, rowspan = 7, columnspan = 7)
+    canvas = tk.Canvas(BLFrame, width = 250, height = 400)
+    canvas.grid(row = 0, column = 0, rowspan = 13, columnspan = 7)
+    canvas = tk.Canvas(CustomFrame, width = 900, height = 600)
+    canvas.grid(row = 0, column = 0)
 
     back = tk.Button(HeatMapFrame, text = "Back", command = back_btn)
     back.grid(row = 2, column = 0, sticky = "sw")
 
     init_TLFrame()
     init_BLFrame()
-    init_BRFrame()
+    setup_plot()
 
 def on_closing():
     if messagebox.askokcancel("Quit", "Do you want to quit?"):
