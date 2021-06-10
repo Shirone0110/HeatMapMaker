@@ -1,6 +1,5 @@
 import csv
 import pandas as pd
-from numpy.core.numeric import indices
 
 #calculates averages for one row not including zeros
 def noZeros(df, ind):
