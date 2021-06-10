@@ -1,5 +1,6 @@
 import csv
 import pandas as pd
+from numpy.core.numeric import indices
 
 #calculates averages for one row not including zeros
 def noZeros(df, ind):
@@ -15,8 +16,11 @@ def noZeros(df, ind):
             if(row[ind] != 0):
                 cnt += 1
         else:
-            avgOcurrence = sum / (cnt * numOtus)
-            new.append(avgOcurrence)
+            if(cnt != 0):
+                avgOccurrence = sum / (cnt * numOtus)
+            else:
+                avgOccurrence = 0
+            new.append(avgOccurrence)
 
             sum = 0
             cnt = 0
@@ -24,7 +28,6 @@ def noZeros(df, ind):
             if(row[ind] != 0):
                 cnt += 1
         lastSpec = row[2]
-        genus = row[3]
         
     return new
 
@@ -41,15 +44,17 @@ def inclZeros(df, ind):
             sum += row[ind]
             cnt += 1
         else:
-            avgOcurrence = sum / (cnt * numOtus)
-            new.append(avgOcurrence)
+            if(cnt != 0):
+                avgOccurrence = sum / (cnt * numOtus)
+            else:
+                avgOccurrence = 0
+            new.append(avgOccurrence)
 
             sum = 0
             cnt = 0
             sum += row[ind]
             cnt += 1
         lastSpec = row[2]
-        genus = row[3]
         
     return new
     
@@ -66,6 +71,23 @@ def columnNames(df):
             
     return columns
 
+def findTopTen(rows):
+    averages = []
+    for row in rows:
+        sum = 0
+        for number in row:
+            sum += number
+        averages.append(sum / len(row))
+    
+    indices = sorted(range(len(averages)), key =lambda i: averages[i])[-10:]
+    indices.reverse()
+    
+    top_rows = []
+    for index in indices:
+        top_rows.append(rows[index])
+        
+    return indices, top_rows
+
 def edit(df):
     del df['label']
     del df["Group"]
@@ -74,21 +96,34 @@ def edit(df):
     df = df.loc[df["Category"] != "moss"] 
     return df
 
+def rowNames(indices, labels):
+    rows = []
+    for index in indices:
+        rows.append(labels[index + 3])
+        
+    return rows
+
 def main():
     path = r"C:\Users\sofib\Documents\desmogs_data.csv"
     df = pd.read_csv(path)
     df = edit(df)
     columns = columnNames(df)
     occurrence = []
-    ind = 4
     
-    for ind in range(ind, 10):
+    for ind in range(4, 24):
         new = noZeros(df, ind)
         occurrence.append(new)
-        ind += 1
+    
+    result = findTopTen(occurrence)
+    indices = result[0]
+    final = result[1]
+    rows = rowNames(indices, df.columns)
     
     print(columns)
-    for row in occurrence:
-        print(row)
+    print(rows)
+    for i in range(0,10):
+        print(indices[i])
+    for i in range(0,10):
+        print(final[i])
         
 main()
