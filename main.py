@@ -2,12 +2,14 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 import tkinter as tk
+import threading
 from tkinter.constants import DISABLED, END, NORMAL
 from tkinter.filedialog import asksaveasfile, askopenfile
 from tkinter import StringVar, colorchooser, Frame, messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import matplotlib
+matplotlib.use('Agg')
 from matplotlib.colors import LinearSegmentedColormap
 
 def pressed(btn):
@@ -88,8 +90,7 @@ def export(fig): #export figure in pdf or png
     if file is None:
         return
     addr = file.name
-    addr = addr.split('/')
-    fig.savefig(addr[-1])
+    fig.savefig(addr)
 
 def preview(num):
     colors = []
@@ -285,14 +286,6 @@ def process_file():
     #print(data)
     draw(vDefaultColor)
 
-def next_btn():
-    SetupFrame.grid_remove()
-    HeatMapFrame.grid()
-    if csvfile is None:
-        messagebox.showerror("Error", "Please choose data file")
-        return
-    process_file()
-
 def choose_file():
     files = [('CSV', '*.csv')]
     global csvfile
@@ -301,8 +294,22 @@ def choose_file():
         return
     addr = csvfile.name
     addr = addr.split('/')
-    showfilename.config(text = addr[-1])
+    showfilename.config(text = addr[-1], fg = 'black')
 
+def loading():
+    process_file()
+    SetupFrame.grid_remove()
+    HeatMapFrame.grid()
+    root.config(cursor = "")
+
+def next_btn():
+    if showfilename.cget('text') == "No file selected":
+        messagebox.showerror("Error", "Please choose data file")
+        return
+
+    root.config(cursor = "watch")
+    threading.Thread(target = loading).start()
+    
 #calculates averages for one row not including zeros
 def noZeros(df, ind):
     sum = 0
@@ -381,30 +388,33 @@ def edit(df):
     return df
 
 def init_SetupFrame():
+    canvas = tk.Canvas(SetupFrame, width = 300, height = 300)
+    canvas.grid(row = 0, column = 0, columnspan = 8, rowspan = 6)
+
     #choose file prompt
-    tk.Label(SetupFrame, text = "Choose data file").grid(row = 0, column = 0, 
+    tk.Label(SetupFrame, text = "1. Choose data file").grid(row = 0, column = 0, 
         sticky = "w", ipadx = 10, ipady = 10)
 
     #show file name
     global showfilename, vYesNo
-    showfilename = tk.Label(SetupFrame, text = "No file chosen")
-    showfilename.grid(row = 1, column = 1)
+    showfilename = tk.Label(SetupFrame, text = "No file selected", fg = 'red')
+    showfilename.grid(row = 1, column = 1, sticky = "n")
 
     choosefile = tk.Button(SetupFrame, text = "Browse", command = choose_file)
     choosefile.grid(row = 0, column = 1)
 
-    tk.Label(SetupFrame, text = "Include 0s in calculation?").grid(row = 2, column = 0, 
+    tk.Label(SetupFrame, text = "2. Include 0s in calculation?").grid(row = 3, column = 0, 
         sticky = "w", padx = 10)
 
     vYesNo = tk.IntVar()
     tk.Radiobutton(SetupFrame, text = "Yes", variable = vYesNo, 
-        value = 1).grid(row = 2, column = 1, sticky = "nw")
+        value = 1).grid(row = 3, column = 1)
     tk.Radiobutton(SetupFrame, text = "No", variable = vYesNo,
-        value = 0).grid(row = 3, column = 1, sticky = "nw")
+        value = 0).grid(row = 4, column = 1)
     vYesNo.set(0)
 
     next = tk.Button(SetupFrame, text = "Next", command = next_btn)
-    next.grid(row = 4, column = 1, pady = 10)
+    next.grid(row = 5, column = 2, pady = 10)
 
 def back_btn():
     HeatMapFrame.grid_remove()
