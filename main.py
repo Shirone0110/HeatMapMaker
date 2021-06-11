@@ -70,7 +70,7 @@ def NonLinCdict(steps, hexcol_array):
 
 def create_plot(colormap): #create plot with color map
     sns.set(style = 'white')
-    #print(data)
+    plt.close('all')
     f, ax = plt.subplots(figsize = (9, 6))
     max = data.to_numpy().max()
     min = data.to_numpy().min()
@@ -199,6 +199,7 @@ def init_BLFrame():
 
 def create_default(color): #create plot
     sns.set(style = 'white')
+    plt.close('all')
     f, ax = plt.subplots(figsize = (9, 6))
     if (int(color) < 3):
         cmap = sns.color_palette(values[color])
@@ -214,6 +215,8 @@ def create_default(color): #create plot
     return f
 
 def draw(v): #redraw heatmap when change button
+    vOption.set(0)
+    switch()
     color = v.get()
     fig = create_default(color)
     canvas = FigureCanvasTkAgg(fig, master = DefaultFrame)  
@@ -414,7 +417,7 @@ def init_SetupFrame():
     vYesNo.set(0)
 
     next = tk.Button(SetupFrame, text = "Next", command = next_btn)
-    next.grid(row = 5, column = 2, pady = 10)
+    next.grid(row = 5, column = 2, padx = 10)
 
 def back_btn():
     HeatMapFrame.grid_remove()
