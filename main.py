@@ -74,12 +74,14 @@ def create_plot(colormap): #create plot with color map
     f, ax = plt.subplots(figsize = (9, 6))
     max = data.to_numpy().max()
     min = data.to_numpy().min()
-    ax = sns.heatmap(vmin = min, vmax = max, data = data.head(10), 
+    ax = sns.heatmap(vmin = min, vmax = max, data = data.head(vTop.get()), 
         cmap = colormap)
     ax.xaxis.tick_top()
     ax.set_xticklabels(data.columns, rotation = 45)
     ax.set_ylabel('')
     ax.xaxis.set_label_position('top')
+    for label in ax.get_xticklabels():
+        label.set_style('italic')
     ax.tick_params(length = 0)
     plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
     return f
@@ -92,7 +94,8 @@ def export(fig): #export figure in pdf or png
     addr = file.name
     fig.savefig(addr)
 
-def preview(num):
+def preview():
+    num = vDropdown.get()
     colors = []
     split = [0]
 
@@ -143,7 +146,7 @@ def check(num):
             return
         tmp = val
     
-    preview(num)
+    preview()
 
 def display(num):
     #show number of rows needed
@@ -160,7 +163,7 @@ def display(num):
 
     #preview button
     cmd = lambda n = num: check(n)
-    button = tk.Button(BLFrame, text="Preview", command = cmd)
+    button = tk.Button(BLFrame, text = "Preview", command = cmd)
     button.grid(column = 2, row = 12, sticky = "se")
 
 def switch():
@@ -169,6 +172,7 @@ def switch():
         DefaultFrame.grid_remove()
     else:
         DefaultFrame.grid()
+        draw()
         CustomFrame.grid_remove()
 
 def init_BLFrame():
@@ -178,9 +182,10 @@ def init_BLFrame():
     label = tk.Label(BLFrame, text = "Colors")
     label.grid(column = 1, row = 1)
 
-    v = tk.IntVar()
+    global vDropdown
+    vDropdown = tk.IntVar()
     optionList = np.arange(4, 11, 1)
-    dropdown = tk.OptionMenu(BLFrame, v, *optionList, command = display)
+    dropdown = tk.OptionMenu(BLFrame, vDropdown, *optionList, command = display)
     dropdown.grid(column = 2, row = 1)
 
     BLFrame.buttons = {}
@@ -205,19 +210,19 @@ def create_default(color): #create plot
         cmap = sns.color_palette(values[color])
     else:
         cmap = sns.color_palette(values[color], as_cmap = True)
-    ax = sns.heatmap(data.head(10), cmap = cmap, center = 0)
+    ax = sns.heatmap(data.head(vTop.get()), cmap = cmap, center = 0)
     ax.set_ylabel('')
     ax.xaxis.tick_top()
     ax.set_xticklabels(data.columns, rotation = 45)
     ax.xaxis.set_label_position('top')
+    for label in ax.get_xticklabels():
+        label.set_style('italic')
     ax.tick_params(length = 0)
     plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
     return f
 
-def draw(v): #redraw heatmap when change button
-    vOption.set(0)
-    switch()
-    color = v.get()
+def draw(): #redraw heatmap when change button
+    color = vDefaultColor.get()
     fig = create_default(color)
     canvas = FigureCanvasTkAgg(fig, master = DefaultFrame)  
     canvas.draw()
@@ -226,6 +231,10 @@ def draw(v): #redraw heatmap when change button
     cmd = lambda fig = fig: export(fig)
     exportbutton = tk.Button(DefaultFrame, text = "Export", command = cmd)
     exportbutton.grid(row = 1, column = 0, sticky = "se")
+
+def change_default():
+    vOption.set(0)
+    switch()
 
 def init_TLFrame():
     tk.Radiobutton(TLFrame, text = "Default", variable = vOption, 
@@ -246,8 +255,7 @@ def init_TLFrame():
     for val, text in values.items():
         count += 1
         tk.Radiobutton(TLFrame, text = text, variable = vDefaultColor, 
-            command = lambda v = vDefaultColor: draw(v), 
-            value = val).grid(row = count + 1, column = 1, sticky = "nw")
+            command = change_default, value = val).grid(row = count + 1, column = 1, sticky = "nw")
 
 #def init_BRFrame():
 #    canvas = tk.Canvas(BRFrame, width = 400, height = 300)
@@ -257,7 +265,7 @@ def find_top(df):
     df['mean'] = df.mean(axis = 1)
     df = df.sort_values(by = ['mean'], ascending = False)
     del df['mean']
-    return df.head(10)
+    return df
 
 def rowNames(indices, labels):
     rows = []
@@ -287,7 +295,7 @@ def process_file():
     data.set_index(keys = 'ind', inplace = True)
 
     #print(data)
-    draw(vDefaultColor)
+    draw()
 
 def choose_file():
     files = [('CSV', '*.csv')]
@@ -427,26 +435,40 @@ def setup_plot():
     plt.yticks(rotation = 0)
     plt.rc('axes', labelsize = 12)
 
+def handleReturn(event):
+    TLFrame.focus_set()
+    if vOption.get() == 0:
+        draw()
+    else:
+        preview()
+
 def init_HeatMapFrame():
-    global TLFrame, DefaultFrame, BLFrame, CustomFrame, vOption
+    global TLFrame, DefaultFrame, BLFrame, CustomFrame, vOption, vTop
     vOption = tk.IntVar() # 0 for default, 1 for custom
+    vTop = tk.IntVar()
+    vTop.set(10)
+
+    tk.Label(HeatMapFrame, text = 'Show top').grid(row = 0, column = 0)
+    entry = tk.Entry(HeatMapFrame, width = 5, textvariable = vTop)
+    entry.grid(row = 0, column = 1, sticky = "w")
+    entry.bind("<Return>", handleReturn)
+    tk.Label(HeatMapFrame, text = 'results').grid(row = 0, column = 2, sticky = "w")
 
     TLFrame = Frame(HeatMapFrame)
-    TLFrame.grid(row = 0, column = 0, sticky = "nswe")
+    TLFrame.grid(row = 1, column = 0, sticky = "nswe", columnspan = 3)
     DefaultFrame = Frame(HeatMapFrame)
-    DefaultFrame.grid(row = 0, column = 1, sticky = "nswe", rowspan = 2)
+    DefaultFrame.grid(row = 0, column = 3, sticky = "nswe", rowspan = 3)
     BLFrame = Frame(HeatMapFrame)
-    BLFrame.grid(row = 1, column = 0, sticky = "nswe")
+    BLFrame.grid(row = 2, column = 0, sticky = "nswe", columnspan = 3)
     CustomFrame = Frame(HeatMapFrame)
-    CustomFrame.grid(row = 0, column = 1, sticky = "nswe", rowspan = 2)
+    CustomFrame.grid(row = 0, column = 3, sticky = "nswe", rowspan = 3)
     CustomFrame.grid_remove()
 
-    canvas = tk.Canvas(TLFrame, width = 250, height = 200)
-    canvas.grid(row = 0, column = 0, rowspan = 7, columnspan = 7)
-    canvas = tk.Canvas(BLFrame, width = 250, height = 400)
-    canvas.grid(row = 0, column = 0, rowspan = 13, columnspan = 7)
-    canvas = tk.Canvas(CustomFrame, width = 900, height = 600)
-    canvas.grid(row = 0, column = 0)
+    tk.Canvas(TLFrame, width = 250, height = 180).grid(row = 0, 
+        column = 0, rowspan = 7, columnspan = 7)
+    tk.Canvas(BLFrame, width = 250, height = 400).grid(row = 0, 
+        column = 0, rowspan = 13, columnspan = 7)
+    tk.Canvas(CustomFrame, width = 900, height = 600).grid(row = 0, column = 0)
 
     back = tk.Button(HeatMapFrame, text = "Back", command = back_btn)
     back.grid(row = 2, column = 0, sticky = "sw")
