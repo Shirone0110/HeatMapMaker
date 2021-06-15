@@ -1,4 +1,5 @@
 import numpy as np
+from pandas.core.indexes.base import Index
 import seaborn as sns
 import pandas as pd
 import tkinter as tk
@@ -68,14 +69,7 @@ def NonLinCdict(steps, hexcol_array):
         cdict['blue'] = cdict['blue'] + ((s, rgb[2], rgb[2]),)
     return cdict
 
-def create_plot(colormap): #create plot with color map
-    sns.set(style = 'white')
-    plt.close('all')
-    f, ax = plt.subplots(figsize = (9, 6))
-    max = data.to_numpy().max()
-    min = data.to_numpy().min()
-    ax = sns.heatmap(vmin = min, vmax = max, data = data.head(vTop.get()), 
-        cmap = colormap)
+def nudge(ax):
     ax.xaxis.tick_top()
     ax.set_xticklabels(data.columns, rotation = 45)
     ax.set_ylabel('')
@@ -83,7 +77,18 @@ def create_plot(colormap): #create plot with color map
     for label in ax.get_xticklabels():
         label.set_style('italic')
     ax.tick_params(length = 0)
-    plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
+    return ax
+
+def create_plot(colormap): #create plot with color map
+    sns.set(style = 'white')
+    plt.close('all')
+    f, ax = plt.subplots(figsize = (10, 6))
+    max = data.to_numpy().max()
+    min = data.to_numpy().min()
+    ax = sns.heatmap(vmin = min, vmax = max, data = data.head(vTop.get()), 
+        cmap = colormap)
+    ax = nudge(ax)
+    plt.subplots_adjust(left = 0.17, right = 1.04, bottom = 0.05, top = 0.8)
     return f
 
 def export(fig): #export figure in pdf or png
@@ -205,20 +210,14 @@ def init_BLFrame():
 def create_default(color): #create plot
     sns.set(style = 'white')
     plt.close('all')
-    f, ax = plt.subplots(figsize = (9, 6))
+    f, ax = plt.subplots(figsize = (10, 6))
     if (int(color) < 3):
         cmap = sns.color_palette(values[color])
     else:
         cmap = sns.color_palette(values[color], as_cmap = True)
     ax = sns.heatmap(data.head(vTop.get()), cmap = cmap, center = 0)
-    ax.set_ylabel('')
-    ax.xaxis.tick_top()
-    ax.set_xticklabels(data.columns, rotation = 45)
-    ax.xaxis.set_label_position('top')
-    for label in ax.get_xticklabels():
-        label.set_style('italic')
-    ax.tick_params(length = 0)
-    plt.subplots_adjust(left = 0.1, right = 1.05, bottom = 0.05, top = 0.8)
+    ax = nudge(ax)
+    plt.subplots_adjust(left = 0.17, right = 1.04, bottom = 0.05, top = 0.8)
     return f
 
 def draw(): #redraw heatmap when change button
@@ -257,10 +256,6 @@ def init_TLFrame():
         tk.Radiobutton(TLFrame, text = text, variable = vDefaultColor, 
             command = change_default, value = val).grid(row = count + 1, column = 1, sticky = "nw")
 
-#def init_BRFrame():
-#    canvas = tk.Canvas(BRFrame, width = 400, height = 300)
-#    canvas.grid(row = 0, column = 0)
-
 def find_top(df):
     df['mean'] = df.mean(axis = 1)
     df = df.sort_values(by = ['mean'], ascending = False)
@@ -272,6 +267,30 @@ def rowNames(indices, labels):
     for index in indices:
         rows.append(labels[index + 3])
     return rows
+
+def set_depth(bacterias):
+    new_list = []
+    depth = min(map(lambda list: len(list), bacterias))
+    for otu in bacterias:
+        new_list.append(otu[:depth])
+    return new_list
+
+def getBacterias(top_otus, path_to_file):
+    bacterias = [None] * len(top_otus)
+    
+    with open(path_to_file, 'r') as file:
+        next(file)
+        for line in file:
+            for i in range(len(top_otus)):
+                if top_otus[i] in line:
+                    text = line.split()[2:][0]
+                    species = text.split(';')[:-1]
+                    species = list(map(lambda item: item.split('(')[0], species))
+                    species = list(filter(lambda item: 'unclassified' not in item and
+                        'uncultured' not in item, species))
+                    bacterias[i] = species
+                    break
+    return bacterias
 
 def process_file():
     path = csvfile.name
@@ -291,9 +310,17 @@ def process_file():
     global data
     data = pd.DataFrame(rows, columns = column)
     data = find_top(data)
-    data['ind'] = rowNames(data.index, df.columns)
-    data.set_index(keys = 'ind', inplace = True)
+    ind = rowNames(data.index, df.columns)
 
+    bacterias = getBacterias(ind, taxofile.name)
+    bacterias = set_depth(bacterias)
+
+    tax_depth = opts.index(vTax.get())
+    rowLabel = []
+    for i in range(len(ind)):
+        rowLabel.append(bacterias[i][tax_depth])
+    data['ind'] = rowLabel
+    data.set_index(keys = 'ind', inplace = True)
     #print(data)
     draw()
 
@@ -307,8 +334,23 @@ def choose_file():
     addr = addr.split('/')
     showfilename.config(text = addr[-1], fg = 'black')
 
+def choose_taxo():
+    files = [('Taxonomy', '*.taxonomy')]
+    global taxofile
+    taxofile = askopenfile(filetypes = files, defaultextension = files)
+    if taxofile is None:
+        return
+    addr = taxofile.name
+    addr = addr.split('/')
+    showtaxoname.config(text = addr[-1], fg = 'black')
+
 def loading():
-    process_file()
+    try:
+        process_file()
+    except IndexError:
+        messagebox.showerror("Error", "Taxonomy depth not available") 
+        root.config(cursor = "")  
+        return
     SetupFrame.grid_remove()
     HeatMapFrame.grid()
     root.config(cursor = "")
@@ -316,6 +358,10 @@ def loading():
 def next_btn():
     if showfilename.cget('text') == "No file selected":
         messagebox.showerror("Error", "Please choose data file")
+        return
+
+    if showtaxoname.cget('text') == "No file selected":
+        messagebox.showerror("Error", "Please choose taxonomy file")
         return
 
     root.config(cursor = "watch")
@@ -399,8 +445,8 @@ def edit(df):
     return df
 
 def init_SetupFrame():
-    canvas = tk.Canvas(SetupFrame, width = 300, height = 300)
-    canvas.grid(row = 0, column = 0, columnspan = 8, rowspan = 6)
+    canvas = tk.Canvas(SetupFrame, width = 300, height = 350)
+    canvas.grid(row = 0, column = 0, columnspan = 8, rowspan = 8)
 
     #choose file prompt
     tk.Label(SetupFrame, text = "1. Choose data file").grid(row = 0, column = 0, 
@@ -414,18 +460,36 @@ def init_SetupFrame():
     choosefile = tk.Button(SetupFrame, text = "Browse", command = choose_file)
     choosefile.grid(row = 0, column = 1)
 
-    tk.Label(SetupFrame, text = "2. Include 0s in calculation?").grid(row = 3, column = 0, 
+    tk.Label(SetupFrame, text = "2. Include 0s in calculation?").grid(row = 2, column = 0, 
         sticky = "w", padx = 10)
 
     vYesNo = tk.IntVar()
     tk.Radiobutton(SetupFrame, text = "Yes", variable = vYesNo, 
-        value = 1).grid(row = 3, column = 1)
+        value = 1).grid(row = 2, column = 1)
     tk.Radiobutton(SetupFrame, text = "No", variable = vYesNo,
-        value = 0).grid(row = 4, column = 1)
+        value = 0).grid(row = 3, column = 1)
     vYesNo.set(0)
 
+    tk.Label(SetupFrame, text = "3. Choose taxonomy file").grid(row = 4, column = 0, 
+        sticky = "w", ipadx = 10, ipady = 10)
+
+    #show file name
+    global showtaxoname, opts, vTax
+    showtaxoname = tk.Label(SetupFrame, text = "No file selected", fg = 'red')
+    showtaxoname.grid(row = 5, column = 1, sticky = "n")
+
+    choosefile = tk.Button(SetupFrame, text = "Browse", command = choose_taxo)
+    choosefile.grid(row = 4, column = 1)
+
+    tk.Label(SetupFrame, text = "4. Choose taxonomy depth").grid(row = 6, column = 0, padx = 10)
+    opts = ["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"]
+    vTax = tk.StringVar()
+    vTax.set(opts[0])
+    ddown = tk.OptionMenu(SetupFrame, vTax, *opts)
+    ddown.grid(row = 6, column = 1, padx = 10)
+
     next = tk.Button(SetupFrame, text = "Next", command = next_btn)
-    next.grid(row = 5, column = 2, padx = 10)
+    next.grid(row = 7, column = 2, padx = 10, pady = 10)
 
 def back_btn():
     HeatMapFrame.grid_remove()
@@ -433,7 +497,7 @@ def back_btn():
 
 def setup_plot():
     plt.yticks(rotation = 0)
-    plt.rc('axes', labelsize = 12)
+    plt.rcParams.update({'font.size': 10})
 
 def handleReturn(event):
     TLFrame.focus_set()
@@ -468,7 +532,7 @@ def init_HeatMapFrame():
         column = 0, rowspan = 7, columnspan = 7)
     tk.Canvas(BLFrame, width = 250, height = 400).grid(row = 0, 
         column = 0, rowspan = 13, columnspan = 7)
-    tk.Canvas(CustomFrame, width = 900, height = 600).grid(row = 0, column = 0)
+    tk.Canvas(CustomFrame, width = 1000, height = 600).grid(row = 0, column = 0)
 
     back = tk.Button(HeatMapFrame, text = "Back", command = back_btn)
     back.grid(row = 2, column = 0, sticky = "sw")
