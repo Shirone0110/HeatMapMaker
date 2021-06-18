@@ -1,13 +1,18 @@
-import csv
 import pandas as pd
+
+def avgOccurrence(sum, cnt, numOtus):
+    if(cnt != 0):
+        return (sum / (cnt * numOtus))
+    else:
+        return 0
 
 #calculates averages for one row not including zeros
 def noZeros(df, ind):
     sum = 0
     cnt = 0
     new = []
-    lastSpec = df.at[0, "Category"]
-    numOtus = df.at[0, "numOtus"]
+    lastSpec = df.at[1, "Category"]
+    numOtus = df.at[1, "numOtus"]
     
     for row in df.itertuples():
         if(row[2] == lastSpec):
@@ -15,11 +20,7 @@ def noZeros(df, ind):
             if(row[ind] != 0):
                 cnt += 1
         else:
-            if(cnt != 0):
-                avgOccurrence = sum / (cnt * numOtus)
-            else:
-                avgOccurrence = 0
-            new.append(avgOccurrence)
+            new.append(avgOccurrence(sum, cnt, numOtus))
 
             sum = 0
             cnt = 0
@@ -28,6 +29,7 @@ def noZeros(df, ind):
                 cnt += 1
         lastSpec = row[2]
         
+    new.append(avgOccurrence(sum, cnt, numOtus))
     return new
 
 #calculates averages for one row including zeros
@@ -35,19 +37,15 @@ def inclZeros(df, ind):
     sum = 0
     cnt = 0
     new = []
-    lastSpec = df.at[0, "Category"]
-    numOtus = df.at[0, "numOtus"]
+    lastSpec = df.at[1, "Category"]
+    numOtus = df.at[1, "numOtus"]
     
     for row in df.itertuples():
         if(row[2] == lastSpec):
             sum += row[ind]
             cnt += 1
         else:
-            if(cnt != 0):
-                avgOccurrence = sum / (cnt * numOtus)
-            else:
-                avgOccurrence = 0
-            new.append(avgOccurrence)
+            new.append(avgOccurrence(sum, cnt, numOtus))
 
             sum = 0
             cnt = 0
@@ -55,6 +53,7 @@ def inclZeros(df, ind):
             cnt += 1
         lastSpec = row[2]
         
+    new.append(avgOccurrence(sum, cnt, numOtus))
     return new
     
 def columnNames(df):
@@ -68,6 +67,7 @@ def columnNames(df):
             lastSpec = row[2]
             genus = row[3]
             
+    columns.append(genus[0] + ". " + lastSpec)
     return columns
 
 def findTopTen(rows):
@@ -93,6 +93,9 @@ def edit(df):
     df = df.loc[df["Category"] != "water"]
     df = df.loc[df["Category"] != "soil"]
     df = df.loc[df["Category"] != "moss"] 
+    df = df.loc[df["Category"] != "air"]
+    df = df.loc[df["Category"] != "Soil"]
+    df = df.loc[df["Category"] != "Air"]
     return df
 
 def rowNames(indices, labels):
@@ -103,25 +106,25 @@ def rowNames(indices, labels):
     return rows
 
 def main():
-    path = r"C:\Users\sofib\Documents\desmogs_data.csv"
+    path = r"C:\Users\sofib\Documents\School\HMM\deadbodies.csv"
     df = pd.read_csv(path)
     df = edit(df)
-    columns = columnNames(df)
+    # columns = columnNames(df)
     occurrence = []
     
-    for ind in range(4, 24):
-        new = noZeros(df, ind)
+    for ind in range(4, 104):
+        new = inclZeros(df, ind)
         occurrence.append(new)
-    
+
+
     result = findTopTen(occurrence)
     indices = result[0]
     final = result[1]
     rows = rowNames(indices, df.columns)
     
-    print(columns)
+    # print(columns)
     print(rows)
-    for i in range(0,10):
-        print(indices[i])
+    print(indices)
     for i in range(0,10):
         print(final[i])
         
