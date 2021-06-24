@@ -1,5 +1,4 @@
 import numpy as np
-from pandas.core.indexes.base import Index
 import seaborn as sns
 import pandas as pd
 import tkinter as tk
@@ -127,8 +126,9 @@ def preview():
     exportbutton = tk.Button(CustomFrame, text = "Export", command = cmd)
     exportbutton.grid(row = 1, column = 0, sticky = "se")
 
-def check(num):
+def check():
     #check all color selected
+    num = vDropdown.get()
     for ind in range(num):
         if BLFrame.buttons[ind].cget('bg') == 'SystemButtonFace':
             messagebox.showerror("Error", "Please choose color")
@@ -167,8 +167,7 @@ def display(num):
     BLFrame.entries[num * 2 - 1].configure(state = DISABLED)
 
     #preview button
-    cmd = lambda n = num: check(n)
-    button = tk.Button(BLFrame, text = "Preview", command = cmd)
+    button = tk.Button(BLFrame, text = "Preview", command = check)
     button.grid(column = 2, row = 12, sticky = "se")
 
 def switch():
@@ -508,7 +507,7 @@ def handleReturn(event):
     if vOption.get() == 0:
         draw()
     else:
-        preview()
+        check()
 
 def init_HeatMapFrame():
     global TLFrame, DefaultFrame, BLFrame, CustomFrame, vOption, vTop
