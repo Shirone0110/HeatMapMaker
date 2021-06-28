@@ -4,6 +4,7 @@ import pandas as pd
 import tkinter as tk
 import threading
 from tkinter.constants import DISABLED, END, NORMAL
+from tkinter.font import Font
 from tkinter.filedialog import asksaveasfile, askopenfile
 from tkinter import StringVar, colorchooser, Frame, messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -74,10 +75,23 @@ def nudge(ax):
     ax.set_xticklabels(merge_data.columns, rotation = 45)
     ax.set_ylabel('')
     ax.xaxis.set_label_position('top')
-    for label in ax.get_xticklabels():
-        label.set_style('italic')
     ax.tick_params(length = 0)
     return ax
+
+def cal_margin():
+    leftmargin = 0
+    topmargin = 0
+    font = Font(family = 'Arial', size = 10)
+
+    for name in merge_data.head(vTop.get()).index:
+        w = font.measure(name)
+        leftmargin = max(leftmargin, w)
+
+    for name in merge_data.columns:
+        w = font.measure(name)
+        topmargin = max(topmargin, w)
+    
+    return leftmargin, topmargin
 
 def create_plot(colormap): #create plot with color map
     sns.set(style = 'white')
@@ -88,7 +102,10 @@ def create_plot(colormap): #create plot with color map
     ax = sns.heatmap(vmin = min, vmax = max, data = merge_data.head(vTop.get()), 
         cmap = colormap)
     ax = nudge(ax)
-    plt.subplots_adjust(left = 0.17, right = 1.04, bottom = 0.05, top = 0.8)
+
+    leftmargin, topmargin = cal_margin()
+    plt.subplots_adjust(left = (leftmargin * 4 / 3) / vWidth.get(), right = 1.04, 
+        bottom = 0.05, top = 1 - ((topmargin + 10) / vHeight.get()))
     return f
 
 def export(fig): #export figure in pdf or png
@@ -222,8 +239,10 @@ def create_default(color): #create plot
         cmap = sns.color_palette(values[color], as_cmap = True)
     ax = sns.heatmap(merge_data.head(vTop.get()), cmap = cmap, center = 0)
     ax = nudge(ax)
-    plt.subplots_adjust(left = 0.17, right = 1.04, 
-        bottom = 0.05, top = 0.8)
+
+    leftmargin, topmargin = cal_margin()
+    plt.subplots_adjust(left = (leftmargin * 4 / 3) / vWidth.get(), right = 1.04, 
+        bottom = 0.05, top = 1 - ((topmargin + 10) / vHeight.get()))
     return f
 
 def draw(): #redraw heatmap when change button
@@ -317,14 +336,11 @@ def process_file():
     path = csvfile.name
     df = pd.read_csv(path)
     df = edit(df)
-    if 'dead' in path:
-        column = ['Ear', 'Nose']
-    else:
-        column = columnNames(df)
+    column = columnNames(df)
+
     rows = []
-    
-    for ind in range(4, len(df.index)):
-    #for ind in range(4, 24):
+    #for ind in range(4, len(df.index)):
+    for ind in range(4, 34):
         if vYesNo.get() == 0:
             new = noZeros(df, ind)
         else:
@@ -457,27 +473,23 @@ def inclZeros(df, ind):
 
 def columnNames(df):
     columns = []
-    lastSpec = df.at[0, "Category"]
-    genus = df.at[0, "Sub"]
-    
+    lastSpec = df.at[1, "Category"]
+   
     for row in df.itertuples():
         if row[2] != lastSpec:
-            columns.append(genus[0] + ". " + lastSpec)
+            columns.append(lastSpec)
             lastSpec = row[2]
-            genus = row[3]
-            
-    columns.append(genus[0] + ". " + lastSpec)
+           
+    columns.append(lastSpec)
     return columns
 
 def edit(df):
-    del df['label']
+    del df["label"]
     del df["Group"]
-    df = df.loc[df["Category"] != "water"]
-    df = df.loc[df["Category"] != "soil"]
-    df = df.loc[df["Category"] != "moss"] 
-    df = df.loc[df["Category"] != "air"]
-    df = df.loc[df["Category"] != "Soil"]
-    df = df.loc[df["Category"] != "Air"]
+    controls = ["water", "soil", "moss", "air"]
+    for control in controls:
+        df = df.loc[df["Category"] != control]
+        df = df.loc[df["Category"] != control.capitalize()]
     return df
 
 def init_SetupFrame():
@@ -533,7 +545,7 @@ def back_btn():
 
 def setup_plot():
     plt.yticks(rotation = 0)
-    plt.rcParams.update({'font.size': 10})
+    plt.rcParams.update({'font.size': 10, 'font.family': 'Arial'})
 
 def handleReturn(event):
     TLFrame.focus_set()
@@ -561,7 +573,7 @@ def init_HeatMapFrame():
     entry.bind("<Return>", handleReturn)
     tk.Label(HeatMapFrame, text = 'results').grid(row = 0, column = 2, sticky = "w")
     
-    tk.Label(HeatMapFrame, text = 'Width').grid(row = 1, column = 0, pady = 5)
+    tk.Label(HeatMapFrame, text = 'Width').grid(row = 1, column = 0)
     entry = tk.Entry(HeatMapFrame, width = 5, textvariable = vWidth)
     entry.grid(row = 1, column = 1, sticky = "w")
     entry.bind("<Return>", handleReturn)
