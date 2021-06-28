@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\hoang\\AppData\\Local\\Programs\\Python\\Python37\\python.exe"
+    "python.defaultInterpreterPath": "C:\\Users\\hoang\\AppData\\Local\\Programs\\Python\\Python37\\python.exe"
 "python.analysis.extraPaths": ["./D:\\University\\Summer2021\\heatmap.py"]
 }
