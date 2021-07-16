@@ -318,13 +318,20 @@ def set_depth(bacterias):
 
 def getBacterias(top_otus, path_to_file):
     bacterias = [None] * len(top_otus)
-    
+
     with open(path_to_file, 'r') as file:
-        next(file)
+        header = file.readline()
+        header = header.split()
+        counter = 0
+        for name in header:
+            tmp = name.casefold()
+            if tmp == 'taxonomy':
+                break
+            counter += 1
         for line in file:
             for i in range(len(top_otus)):
                 if top_otus[i] in line:
-                    text = line.split()[2:][0]
+                    text = line.split()[counter]
                     species = text.split(';')[:-1]
                     species = list(map(lambda item: item.split('(')[0], species))
                     species = list(filter(lambda item: 'uncultured' not in item, species))
@@ -336,15 +343,21 @@ def process_file():
     path = csvfile.name
     df = pd.read_csv(path)
     df = edit(df)
+    df = df.reset_index(drop = True)
     column = columnNames(df)
 
     rows = []
-    #for ind in range(4, len(df.index)):
-    for ind in range(4, 34):
+    counter = 0
+    for col in df.columns:
+        if col.find('otu') == 0 or col.find('Otu') == 0:
+            break
+        counter += 1
+    for ind in range(counter, len(df.index)):
+    #for ind in range(3, 34):
         if vYesNo.get() == 0:
-            new = noZeros(df, ind)
+            new = noZeros(df, ind + 1)
         else:
-            new = inclZeros(df, ind)
+            new = inclZeros(df, ind + 1)
         rows.append(new)
     
     global merge_data
@@ -429,8 +442,8 @@ def noZeros(df, ind):
     sum = 0
     cnt = 0
     new = []
-    lastSpec = df.at[1, "Category"]
-    numOtus = df.at[1, "numOtus"]
+    lastSpec = df.at[0, "Category"]
+    numOtus = df.at[0, "numOtus"]
 
     for row in df.itertuples():
         if(row[2] == lastSpec):
@@ -454,8 +467,8 @@ def inclZeros(df, ind):
     sum = 0
     cnt = 0
     new = []
-    lastSpec = df.at[1, "Category"]
-    numOtus = df.at[1, "numOtus"]
+    lastSpec = df.at[0, "Category"]
+    numOtus = df.at[0, "numOtus"]
 
     for row in df.itertuples():
         if(row[2] == lastSpec):
